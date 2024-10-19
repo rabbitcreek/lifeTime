@@ -1,10 +1,17 @@
 #include <ESP32Servo.h>
 #include <FastLED.h>
+#include "RTClib.h"
+
+RTC_DS3231 rtc;
+int bYear = 1953;
+int bMonth = 9;
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 Servo myservo;  // create servo object to control a servo
 // 16 servo objects can be created on the ESP32
 
 int pos = 0;    // variable to store the servo position
-
+int nRows = 0;
+int nMonths = 0;
 int servoPin = D7;
 #define NUM_LEDS 550
 CRGB leds[NUM_LEDS];
@@ -13,13 +20,18 @@ CRGB leds2[NUM_LEDS];
 #define DATA_PIN2 D8
 #define DATA_PIN D9
 int colorBrray[550];
-
+CRGB currentColor(250,25,25);
 void setup() {
   Serial.begin();
-  
-  FastLED.addLeds<WS2812,DATA_PIN,RGB>(leds2,NUM_LEDS);
-  FastLED.addLeds<WS2812,DATA_PIN2,RGB>(leds,NUM_LEDS);
-	FastLED.setBrightness(84);
+if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    while (1) delay(10);
+  }
+//rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  FastLED.addLeds<WS2812,DATA_PIN,GRB>(leds2,NUM_LEDS);
+  FastLED.addLeds<WS2812,DATA_PIN2,GRB>(leds,NUM_LEDS);
+	FastLED.setBrightness(30);
 	// Allow allocation of all timers
 	ESP32PWM::allocateTimer(0);
 	ESP32PWM::allocateTimer(1);
@@ -38,9 +50,23 @@ void fadeall() {
     leds2[i].nscale8(250); 
    }
     }
+void timerCalc(){
+  DateTime now = rtc.now();
+  int monthTotal = 1080 - (((now.year()- bYear) * 12)+(now.month() - bMonth));
+  Serial.print("total months =");
+Serial.println(monthTotal);
+ nRows = float(monthTotal) / 12;
+ nMonths = monthTotal % 12;
+Serial.print("rows = ");
+Serial.println(nRows);
+Serial.print("leftovermonths =");
+Serial.println(nMonths);
+}
 
 void loop() {
- 
+ timerCalc();
+ FastLED.clear();
+ FastLED.show();
 	for (pos = 0; pos <= 90; pos = pos + 1) { // goes from 0 degrees to 180 degrees
 		// in steps of 1 degree
 		myservo.write(pos);    // tell servo to go to position in variable 'pos'
@@ -48,6 +74,7 @@ void loop() {
 		delay(35);             // waits 15ms for the servo to reach the position
 	}
   //myservo.detach();
+  /*
   delay(10000);
   static uint8_t hue = 0;
   for(int i = 0; i < NUM_LEDS; i++) {
@@ -77,6 +104,7 @@ void loop() {
 		// Wait a little bit before we loop around and do it again
 		delay(10);
 	}
+  /*
   //myservo.attach(servoPin, 1000, 4000);
 	for (pos = 90; pos >= 0; pos = pos - 1) { // goes from 180 degrees to 0 degrees
 		myservo.write(pos); 
@@ -84,10 +112,16 @@ void loop() {
 		delay(50);             // waits 15ms for the servo to reach the position
 	}
   //myservo.detach();
-   delay(10000);
+   
   //myservo.detach();
+  */
+fill_solid(leds,NUM_LEDS, CRGB::DarkGreen);
+fill_solid(leds2,NUM_LEDS, CRGB::DarkGreen);
+FastLED.show();
+randomArray();
+delay(10000);
  
-  
+  //for(int i = 0; i<540; i++)Serial.print(colorBrray[i]);
 
 }
 void randomArray(){
@@ -101,4 +135,26 @@ void randomArray(){
     colorBrray[j] = t;
 }
 //Serial.print(colorBrray);
+for(int i = 0; i < 540; i++){
+leds[colorBrray[i]].fadeToBlackBy(250);
+//leds[colorBrray[i]] = CRGB::DarkRed;
+leds2[colorBrray[i]].fadeToBlackBy(250);
+//nMonths = 3;
+if(nMonths > 6 ){
+fill_solid(leds, (nRows * 6) + 6, CRGB::DarkRed );
+fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::DarkRed );
+} else {fill_solid(leds2, (nRows * 6), CRGB::DarkRed );
+fill_solid(leds, (nRows * 6) + nMonths, CRGB::DarkRed );
+}
+
+ FastLED.show();
+ //fadeall();
+ delay(100);
+
+}
+delay(5000);
+fill_solid(leds,NUM_LEDS, CRGB::Black);
+fill_solid(leds2,NUM_LEDS, CRGB::Black);
+FastLED.show();
+delay(5000);
 }
