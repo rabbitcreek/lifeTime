@@ -10,7 +10,7 @@ int bMonth = 9;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 Servo myservo;  // create servo object to control a servo
 // 16 servo objects can be created on the ESP32
-
+bool endcycle = 0;
 int pos = 0;    // variable to store the servo position
 int nRows = 0;
 int nMonths = 0;
@@ -97,10 +97,15 @@ void timerCalc(){
 }
 
 void loop() {
+  EVERY_N_MINUTES(5){
+    openServo();
+    delay(5000);
+    endcycle = 0;
+    resetMatrix();
+  }
  timerCalc();
  if (waterLevel >0){
- clearMatrix();          // Clear the matrix for each frame
-
+  clearMatrix();          // Clear the matrix for each frame
   updateRaindrops();      // Update raindrop positions
   drawWaterLevel();       // Draw the water level
   
@@ -110,59 +115,32 @@ void loop() {
     }
   }
   startTime = millis();
- } 
-  //resetMatrix(); 
-      // Check if water level has reached the bottom and reset
+ }  
  if(waterLevel <=0){
   if(millis() - startTime < 25000)removalNow();
   else if(leds[0] != CRGB(0,0,0)) {
      EVERY_N_MILLISECONDS(100) {
-
     // Try different fade values here and note how it changes the look.
     fadeToBlackBy(leds, NUM_LEDS, 10);  // 10/255 = 4%
-    fadeToBlackBy(leds2, NUM_LEDS, 10);  // 10/255 = 4%
-    
+    fadeToBlackBy(leds2, NUM_LEDS, 10);  // 10/255 = 4%    
   }
-  
-
   }
 }
- if(waterLevel <=0 && leds[0] == CRGB(0,0,0))resetMatrix();
- /*
- if((90- nRows) >= waterLevel){
-  if(nMonths > 6 ){
-fill_solid(leds, (nRows * 6) + 6, CRGB(0,0,30) );
-fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB(0,0,30) );
-} else {fill_solid(leds2, (nRows * 6), CRGB(0,0,30));
-fill_solid(leds, (nRows * 6) + nMonths, CRGB(0,0,30) );
-}
+ //if(waterLevel <=0 && leds[0] == CRGB(0,0,0))resetMatrix();
+ if(waterLevel <=0 && leds[0] == CRGB(0,0,0) ){
+  if(!endcycle){
+     clearMatrix();
+     FastLED.show();
+  closeServo(); 
+  delay(1000);
+  }
+ 
+  endcycle = 1;
  }
- */
   FastLED.show();         // Show the updated matrix
   delay(50);              // Delay to control the speed of the animation
 
- /*
-	for (pos = 0; pos <= 90; pos = pos + 1) { // goes from 0 degrees to 180 degrees
-		// in steps of 1 degree
-		myservo.write(pos);    // tell servo to go to position in variable 'pos'
-    //Serial.println(pos);
-		delay(35);             // waits 15ms for the servo to reach the position
-	}
  
- 
-	
- 
-  
-	for (pos = 90; pos >= 0; pos = pos - 1) { // goes from 180 degrees to 0 degrees
-		myservo.write(pos); 
-    //Serial.println(pos);   // tell servo to go to position in variable 'pos'
-		delay(50);             // waits 15ms for the servo to reach the position
-	}
-  
-  //myservo.detach();
-  
-
-*/
 }
 
 void clearMatrix() {
@@ -221,9 +199,6 @@ void updateRaindrops() {
 // Draw the rising water level
 void drawWaterLevel() {
   for (int y = 90; y > (int)waterLevel; y--) {
-    // Set the water color gradient from darker to lighter green
-    //CRGB color = CRGB(0, 0, 0); // Start with black (no color)
-    //int clar = (90/(y + 1)) + 10;
     CRGB color = CRGB(0, (y*2) +10, 0); // Dim light green
     
     for (int x = 0; x < WIDTH; x++) {
@@ -317,13 +292,9 @@ void startRandomFalling() {
    }
 void removalNow(){
   //fill_solid(leds, NUM_LEDS, CRGB::Green);  // Fill the matrix with green color
-  FastLED.show();
-  
- 
+  FastLED.show(); 
 task = 1;
   // Check if 30 seconds have passed
-  
-
   // Start random falling
   startRandomFalling();
   
@@ -342,11 +313,27 @@ fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::DarkViolet );
 fill_solid(leds, (nRows * 6) + nMonths, CRGB::DarkViolet );
 }
 for(int i = 0; i <nRows *6; i++){
-  leds[i] = CRGB(0, 0, 10 + i);
-  leds2[i]= CRGB(0,0, 10 + i );
+  leds[i] = CRGB(0, 0, 50 + i);
+  leds2[i]= CRGB(0,0, 50 + i );
 }
 drawFallingPixels();
   FastLED.show();  // Show the updated matrix
   delay(50);       // Co
-}   
-    
+}
+void openServo(){
+  for (pos = 0; pos <= 90; pos = pos + 1) { // goes from 0 degrees to 180 degrees
+		// in steps of 1 degree
+		myservo.write(pos);    // tell servo to go to position in variable 'pos'
+    //Serial.println(pos);
+     delay(50);
+  }
+ 
+} 
+void closeServo(){
+  for (pos = 90; pos >= 0; pos = pos - 1) { // goes from 180 degrees to 0 degrees
+		myservo.write(pos); 
+    //Serial.println(pos);   // tell servo to go to position in variable 'pos'
+		delay(50);             // waits 15ms for the servo to reach the position
+ 
+}  
+}
