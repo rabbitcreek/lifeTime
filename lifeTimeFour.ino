@@ -1,14 +1,9 @@
 #include <ESP32Servo.h>
 #include <FastLED.h>
-#include "RTClib.h"
-//#define LED_PIN     D9        // Pin where the NeoPixel matrix is connected (D9)
-//#define NUM_LEDS    540      // Total number of LEDs in the 6x90 matrix
+#include "RTClib.h"     // Total number of LEDs in the 6x90 matrix
 #define WIDTH       6        // Matrix width
 #define HEIGHT      90       // Matrix height
-//#define COLOR_ORDER GRB      // Color order for your NeoPixels
-//#define CHIPSET     WS2812B  // Adjust to match your specific LED strip/matrix type
 bool task = 1;
-//CRGB leds[NUM_LEDS];         // LED array for the matrix
 RTC_DS3231 rtc;
 int bYear = 1953;
 int bMonth = 9;
@@ -91,20 +86,18 @@ if (! rtc.begin()) {
 void timerCalc(){
   DateTime now = rtc.now();
   int monthTotal = 1080 - (((now.year()- bYear) * 12)+(now.month() - bMonth));
-  Serial.print("total months =");
-Serial.println(monthTotal);
+  //Serial.print("total months =");
+//Serial.println(monthTotal);
  nRows = float(monthTotal) / 12;
  nMonths = monthTotal % 12;
-Serial.print("rows = ");
-Serial.println(nRows);
-Serial.print("leftovermonths =");
-Serial.println(nMonths);
+//Serial.print("rows = ");
+////Serial.println(nRows);
+//Serial.print("leftovermonths =");
+//Serial.println(nMonths);
 }
 
 void loop() {
  timerCalc();
- //FastLED.clear();
- //FastLED.show();
  if (waterLevel >0){
  clearMatrix();          // Clear the matrix for each frame
 
@@ -116,18 +109,35 @@ void loop() {
       drawRaindrop(raindrops[i]);  // Draw active raindrops
     }
   }
+  startTime = millis();
  } 
-  //resetMatrix();          // Check if water level has reached the bottom and reset
- if(waterLevel <=0)removalNow();
+  //resetMatrix(); 
+      // Check if water level has reached the bottom and reset
+ if(waterLevel <=0){
+  if(millis() - startTime < 20000)removalNow();
+  else if(leds[0] != CRGB(0,0,0)) {
+     EVERY_N_MILLISECONDS(250) {
+
+    // Try different fade values here and note how it changes the look.
+    fadeToBlackBy(leds, NUM_LEDS, 10);  // 10/255 = 4%
+    fadeToBlackBy(leds2, NUM_LEDS, 10);  // 10/255 = 4%
+    
+  }
+  
+
+  }
+}
+ if(waterLevel <=0 && leds[0] == CRGB(0,0,0))resetMatrix();
+ /*
  if((90- nRows) >= waterLevel){
   if(nMonths > 6 ){
-fill_solid(leds, (nRows * 6) + 6, CRGB::Aquamarine );
-fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::Aquamarine );
-} else {fill_solid(leds2, (nRows * 6), CRGB:: Aquamarine);
-fill_solid(leds, (nRows * 6) + nMonths, CRGB::Aquamarine );
+fill_solid(leds, (nRows * 6) + 6, CRGB(0,0,30) );
+fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB(0,0,30) );
+} else {fill_solid(leds2, (nRows * 6), CRGB(0,0,30));
+fill_solid(leds, (nRows * 6) + nMonths, CRGB(0,0,30) );
 }
  }
- 
+ */
   FastLED.show();         // Show the updated matrix
   delay(50);              // Delay to control the speed of the animation
 
@@ -151,49 +161,10 @@ fill_solid(leds, (nRows * 6) + nMonths, CRGB::Aquamarine );
   
   //myservo.detach();
   
-fill_solid(leds,NUM_LEDS, CRGB::DarkGreen);
-fill_solid(leds2,NUM_LEDS, CRGB::DarkGreen);
-FastLED.show();
-randomArray();
-delay(10000);
- 
-  //for(int i = 0; i<540; i++)Serial.print(colorBrray[i]);
+
 */
 }
-void randomArray(){
-  for(int i = 0; i < 541; i++) colorBrray[i]= i;
-  for (  int i = 0; i <539; i++)
-{
-    size_t j = random(0, 539 - i);
 
-    int t = colorBrray[i];
-    colorBrray[i] =colorBrray[j];
-    colorBrray[j] = t;
-}
-//Serial.print(colorBrray);
-for(int i = 0; i < 540; i++){
-leds[colorBrray[i]].fadeToBlackBy(250);
-//leds[colorBrray[i]] = CRGB::DarkRed;
-leds2[colorBrray[i]].fadeToBlackBy(250);
-//nMonths = 3;
-if(nMonths > 6 ){
-fill_solid(leds, (nRows * 6) + 6, CRGB::Aquamarine );
-fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::Aquamarine );
-} else {fill_solid(leds2, (nRows * 6), CRGB::Aquamarine);
-fill_solid(leds, (nRows * 6) + nMonths, CRGB::Aquamarine );
-}
-
- FastLED.show();
- //fadeall();
- delay(100);
-
-}
-delay(5000);
-fill_solid(leds,NUM_LEDS, CRGB::Black);
-fill_solid(leds2,NUM_LEDS, CRGB::Black);
-FastLED.show();
-delay(5000);
-}
 void clearMatrix() {
   for (int i = 0; i < NUM_LEDS; i++) {
     leds[i] = CRGB::Black;
@@ -278,14 +249,16 @@ void initFallingPixel(int x, int y) {
   fallingPixels[index].y = y;
   fallingPixels[index].speed = 01.0 + (random(0, 10) * 0.5); // Random falling speed
   fallingPixels[index].active = true;
-  leds[index] = CRGB::BlanchedAlmond;  // Change the color of the pixel to red
+  leds[index] = CRGB(20,0,0);
+  leds2[index] = CRGB(20,0,0);// Change the color of the pixel to red
 }
 // Clear the falling pixels that have hit the bottom
 void clearInactivePixels() {
   for (int i = 0; i < NUM_LEDS; i++) {
     if (fallingPixels[i].active && fallingPixels[i].y >= 90) {
       fallingPixels[i].active = false;    // Deactivate the pixel
-      leds[XY(fallingPixels[i].x, 90)] = CRGB::Black; // Turn off the LED when it reaches the bottom
+      leds[XY(fallingPixels[i].x, 90)] = CRGB::Black;
+       leds2[XY(fallingPixels[i].x, 90)] = CRGB::Black;// Turn off the LED when it reaches the bottom
     }
   }
 }
@@ -296,7 +269,8 @@ void updateFallingPixels() {
     if (fallingPixels[i].active) {
       int x = fallingPixels[i].x;
       int y = (int)fallingPixels[i].y; 
-      leds[XY(x, y)] = CRGB::Black;  // Draw the red falling pixel
+      leds[XY(x, y)] = CRGB::Black; 
+      leds2[XY(x, y)] = CRGB::Black;  // Draw the red falling pixel
       fallingPixels[i].y += fallingPixels[i].speed;  // Update the Y position (fall down)
 
       if (fallingPixels[i].y > 90) {
@@ -314,7 +288,8 @@ void drawFallingPixels() {
       int y = (int)fallingPixels[i].y;  // Integer Y position
 
       if (y >= 0 && y < HEIGHT) {
-        leds[XY(x, y)] = CRGB::Aquamarine;  // Draw the red falling pixel
+        leds[XY(x, y)] = CRGB(20,0,0);
+        leds2[XY(x, y)] = CRGB(20,0,0);  // Draw the red falling pixel
       }
     }
   }
@@ -339,16 +314,11 @@ void startRandomFalling() {
 void removalNow(){
   //fill_solid(leds, NUM_LEDS, CRGB::Green);  // Fill the matrix with green color
   FastLED.show();
-  startTime = millis();  // Record the start time
+  
  
 task = 1;
   // Check if 30 seconds have passed
-  if (millis() - startTime >= 30000) {
-    FastLED.clear(); // Clear everything when 30 seconds are up
-    FastLED.show();
-    delay(1000);
-    
-  }
+  
 
   // Start random falling
   startRandomFalling();
@@ -362,10 +332,10 @@ task = 1;
   // Draw the falling pixels
   drawFallingPixels();
    if(nMonths > 6 ){
-fill_solid(leds, (nRows * 6) + 6, CRGB::Aquamarine );
-fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::Aquamarine );
-} else {fill_solid(leds2, (nRows * 6), CRGB:: Aquamarine);
-fill_solid(leds, (nRows * 6) + nMonths, CRGB::Aquamarine );
+fill_solid(leds, (nRows * 6) + 6, CRGB::DarkViolet );
+fill_solid(leds2, (nRows * 6)+ (nMonths - 6), CRGB::DarkViolet );
+} else {fill_solid(leds2, (nRows * 6), CRGB:: DarkViolet);
+fill_solid(leds, (nRows * 6) + nMonths, CRGB::DarkViolet );
 }
 
   FastLED.show();  // Show the updated matrix
