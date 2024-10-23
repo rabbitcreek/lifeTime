@@ -100,7 +100,7 @@ void loop() {
   EVERY_N_MINUTES(5){
     timerCalc();
     openServo();
-    delay(5000);
+    delay(1000);
     endcycle = 0;
     resetMatrix();
   }
@@ -118,7 +118,7 @@ void loop() {
   startTime = millis();
  }  
  if(waterLevel <=0){
-  if(millis() - startTime < 25000)removalNow();
+  if(millis() - startTime < 30000)removalNow();
   else if(leds[0] != CRGB(0,0,0)) {
     clearMatrix();
   }
@@ -336,32 +336,7 @@ void closeServo(){
  
 }  
 }
-void displayTimeColor(int timeHour) {
-  CRGB color;
 
-  // Define the color based on the time of day
-  if (timeHour >= 1 && timeHour <= 6) {
-    // Night (dark blue)
-    color = CRGB::DarkBlue;
-  } else if (timeHour >= 7 && timeHour <= 9) {
-    // Morning (yellow-orange)
-    color = CRGB::Orange;
-  } else if (timeHour >= 10 && timeHour <= 16) {
-    // Day (beige-white)
-    color = CRGB::Beige;
-  } else if (timeHour >= 17 && timeHour <= 19) {
-    // Evening (red-yellow)
-    color = CRGB::OrangeRed;
-  } else {
-    // Dusk (violet)
-    color = CRGB::Purple;
-  }
-
-  // Fill the entire matrix with the selected color
-  fill_solid(leds, NUM_LEDS, color);
- fill_solid(leds2, NUM_LEDS, color);
-
-}
 void displayTimePalette(int timeHour) {
   CRGBPalette16 palette;
 
@@ -384,11 +359,12 @@ void displayTimePalette(int timeHour) {
   }
 
   // Create banded effect with the chosen palette
-  for (int y = 0; y < MATRIX_HEIGHT; y++) {
-    for (int x = 0; x < MATRIX_WIDTH; x++) {
+  for (int y = 0; y < HEIGHT; y++) {
+    for (int x = 0; x < WIDTH; x++) {
       int pixelIndex = XY(x, y);
       uint8_t paletteIndex = (colorOffset + y * colorStep) % 255;  // Move through palette
-      leds[pixelIndex] = ColorFromPalette(palette, paletteIndex, 255, LINEARBLEND);
+      leds[pixelIndex] = ColorFromPalette(palette, paletteIndex, 60, LINEARBLEND);
+      leds2[pixelIndex] = ColorFromPalette(palette, paletteIndex, 60, LINEARBLEND);
     }
   }
 
