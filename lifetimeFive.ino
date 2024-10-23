@@ -15,6 +15,8 @@ int pos = 0;    // variable to store the servo position
 int nRows = 0;
 int nMonths = 0;
 int servoPin = D7;
+static uint8_t colorOffset = 0;
+static uint8_t colorStep = 1;
 #define NUM_LEDS 540
 CRGB leds[NUM_LEDS];
 CRGB leds2[NUM_LEDS];
@@ -81,11 +83,7 @@ if (! rtc.begin()) {
     raindrops[i].active = false;
   }
 }
-CRGBPalette16 nightPalette = CRGBPalette16(CRGB::DarkBlue, CRGB::Navy, CRGB::MidnightBlue, CRGB::DarkOliveGreen);
-CRGBPalette16 morningPalette = CRGBPalette16(CRGB::Yellow, CRGB::LightYellow, CRGB::Red, CRGB::Orange);
-CRGBPalette16 dayPalette = CRGBPalette16(CRGB::Red, CRGB::Yellow, CRGB::LightSkyBlue, CRGB::AntiqueWhite);
-CRGBPalette16 eveningPalette = CRGBPalette16(CRGB::Red, CRGB::OrangeRed, CRGB::LightSalmon, CRGB::DarkOrange);
-CRGBPalette16 duskPalette = CRGBPalette16(CRGB::Violet, CRGB::DarkOrange, CRGB::Purple, CRGB::Indigo);
+
 
 
 void timerCalc(){
@@ -100,12 +98,13 @@ timeHour = now.hour();
 
 void loop() {
   EVERY_N_MINUTES(5){
+    timerCalc();
     openServo();
     delay(5000);
     endcycle = 0;
     resetMatrix();
   }
- timerCalc();
+ 
  if (waterLevel >0){
   clearMatrix();          // Clear the matrix for each frame
   updateRaindrops();      // Update raindrop positions
@@ -121,11 +120,7 @@ void loop() {
  if(waterLevel <=0){
   if(millis() - startTime < 25000)removalNow();
   else if(leds[0] != CRGB(0,0,0)) {
-     EVERY_N_MILLISECONDS(100) {
-    // Try different fade values here and note how it changes the look.
-    fadeToBlackBy(leds, NUM_LEDS, 10);  // 10/255 = 4%
-    fadeToBlackBy(leds2, NUM_LEDS, 10);  // 10/255 = 4%    
-  }
+    clearMatrix();
   }
 }
  //if(waterLevel <=0 && leds[0] == CRGB(0,0,0))resetMatrix();
@@ -136,7 +131,9 @@ void loop() {
   closeServo(); 
   delay(1000);
   }
- displayFlutteringBands(timeHour);
+   displayTimePalette(timeHour);
+//displayTimeColor(timeHour);
+  
   endcycle = 1;
  }
   FastLED.show();         // Show the updated matrix
@@ -339,53 +336,61 @@ void closeServo(){
  
 }  
 }
-CRGBPalette16 getPaletteForHour(uint8_t hour) {
-  if (hour >= 0 && hour <= 5) {
-    return nightPalette;
-  } else if (hour >= 6 && hour <= 11) {
-    return morningPalette;
-  } else if (hour >= 12 && hour <= 17) {
-    return dayPalette;
-  } else if (hour >= 18 && hour <= 20) {
-    return eveningPalette;
+void displayTimeColor(int timeHour) {
+  CRGB color;
+
+  // Define the color based on the time of day
+  if (timeHour >= 1 && timeHour <= 6) {
+    // Night (dark blue)
+    color = CRGB::DarkBlue;
+  } else if (timeHour >= 7 && timeHour <= 9) {
+    // Morning (yellow-orange)
+    color = CRGB::Orange;
+  } else if (timeHour >= 10 && timeHour <= 16) {
+    // Day (beige-white)
+    color = CRGB::Beige;
+  } else if (timeHour >= 17 && timeHour <= 19) {
+    // Evening (red-yellow)
+    color = CRGB::OrangeRed;
   } else {
-    return duskPalette;
+    // Dusk (violet)
+    color = CRGB::Purple;
   }
+
+  // Fill the entire matrix with the selected color
+  fill_solid(leds, NUM_LEDS, color);
+ fill_solid(leds2, NUM_LEDS, color);
+
 }
-void displayFlutteringBands(uint8_t hour) {
-  while(endcycle){
-  static uint8_t shift = 0;
-  static bool directionUp = true; // Determines whether bands move up or down
-  static uint8_t flutterVariance = 0; // Variance for random speed
+void displayTimePalette(int timeHour) {
+  CRGBPalette16 palette;
 
-  CRGBPalette16 currentPalette = getPaletteForHour(hour); // Get palette based on timeHour
+  // Define the color palette based on the time of day
+  if (timeHour >= 1 && timeHour <= 6) {
+    // Night (dark blue)
+    palette = CRGBPalette16(CRGB::MidnightBlue, CRGB::MidnightBlue, CRGB::DarkBlue, CRGB::Navy);
+  } else if (timeHour >= 7 && timeHour <= 9) {
+    // Morning (yellow-orange)
+    palette = CRGBPalette16(CRGB::Orange, CRGB::Yellow, CRGB::OrangeRed, CRGB::Gold);
+  } else if (timeHour >= 10 && timeHour <= 16) {
+    // Day (beige-white)
+    palette = CRGBPalette16(CRGB::Wheat, CRGB::LightGoldenrodYellow, CRGB::Beige, CRGB::White);
+  } else if (timeHour >= 17 && timeHour <= 19) {
+    // Evening (red-yellow)
+    palette = CRGBPalette16(CRGB::OrangeRed, CRGB::Yellow, CRGB::Orange, CRGB::Red);
+  } else {
+    // Dusk (violet)
+    palette = CRGBPalette16(CRGB::DarkViolet, CRGB::Purple, CRGB::MediumPurple, CRGB::Indigo);
+  }
 
-  // Draw color bands across the matrix
-  for (int y = 0; y < HEIGHT; y++) {
-    for (int x = 0; x < WIDTH; x++) {
-      uint8_t colorIndex = (x * 16 / WIDTH) + shift; // Generate bands based on X position
-      leds[XY(x, y)] = ColorFromPalette(currentPalette, colorIndex, 40);
-      leds2[XY(x, y)] = ColorFromPalette(currentPalette, colorIndex, 40);  // 128 for half brightness
+  // Create banded effect with the chosen palette
+  for (int y = 0; y < MATRIX_HEIGHT; y++) {
+    for (int x = 0; x < MATRIX_WIDTH; x++) {
+      int pixelIndex = XY(x, y);
+      uint8_t paletteIndex = (colorOffset + y * colorStep) % 255;  // Move through palette
+      leds[pixelIndex] = ColorFromPalette(palette, paletteIndex, 255, LINEARBLEND);
     }
   }
 
-  FastLED.show();
-
-  // Adjust shift direction and random variance
-  if (directionUp) {
-    shift += (1 + random(3)); // Move up with random speed variance
-  } else {
-    shift -= (1 + random(3)); // Move down with random speed variance
-  }
-
-  // Randomly switch direction for fluttering effect
-  if (random(10) > 7) {
-    directionUp = !directionUp;
-  }
-
-  // Add random delay to create fluttering timing
-  flutterVariance = random(50, 150); // Random delay between 50 and 150 milliseconds
-  delay(flutterVariance);
-  }
+  colorOffset += 1;  // Shift the palette for continuous motion
 }
-
