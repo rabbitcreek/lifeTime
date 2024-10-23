@@ -51,7 +51,7 @@ int XY(int x, int y) {
     return (HEIGHT - 1 - y) * WIDTH + (WIDTH - 1 - x);  // Reverse both row and column indexing
   }
 }
-
+uint8_t timeHour;
 #define DATA_PIN2 D8
 #define DATA_PIN D9
 int colorBrray[550];
@@ -75,12 +75,17 @@ if (! rtc.begin()) {
 	myservo.setPeriodHertz(50);    // standard 50 hz servo
 	myservo.attach(servoPin, 500, 2500); // attaches the servo on pin 18 to the servo object
   FastLED.clear();  // Clear the matrix
-
+   
   // Initialize all raindrops as inactive
   for (int i = 0; i < numDrops; i++) {
     raindrops[i].active = false;
   }
 }
+CRGBPalette16 nightPalette = CRGBPalette16(CRGB::DarkBlue, CRGB::Navy, CRGB::MidnightBlue, CRGB::DarkOliveGreen);
+CRGBPalette16 morningPalette = CRGBPalette16(CRGB::Yellow, CRGB::LightYellow, CRGB::Red, CRGB::Orange);
+CRGBPalette16 dayPalette = CRGBPalette16(CRGB::Red, CRGB::Yellow, CRGB::LightSkyBlue, CRGB::AntiqueWhite);
+CRGBPalette16 eveningPalette = CRGBPalette16(CRGB::Red, CRGB::OrangeRed, CRGB::LightSalmon, CRGB::DarkOrange);
+CRGBPalette16 duskPalette = CRGBPalette16(CRGB::Violet, CRGB::DarkOrange, CRGB::Purple, CRGB::Indigo);
 
 
 void timerCalc(){
@@ -90,10 +95,7 @@ void timerCalc(){
 //Serial.println(monthTotal);
  nRows = float(monthTotal) / 12;
  nMonths = monthTotal % 12;
-//Serial.print("rows = ");
-////Serial.println(nRows);
-//Serial.print("leftovermonths =");
-//Serial.println(nMonths);
+timeHour = now.hour();
 }
 
 void loop() {
@@ -134,7 +136,7 @@ void loop() {
   closeServo(); 
   delay(1000);
   }
- 
+ displayFlutteringBands(timeHour);
   endcycle = 1;
  }
   FastLED.show();         // Show the updated matrix
@@ -337,3 +339,53 @@ void closeServo(){
  
 }  
 }
+CRGBPalette16 getPaletteForHour(uint8_t hour) {
+  if (hour >= 0 && hour <= 5) {
+    return nightPalette;
+  } else if (hour >= 6 && hour <= 11) {
+    return morningPalette;
+  } else if (hour >= 12 && hour <= 17) {
+    return dayPalette;
+  } else if (hour >= 18 && hour <= 20) {
+    return eveningPalette;
+  } else {
+    return duskPalette;
+  }
+}
+void displayFlutteringBands(uint8_t hour) {
+  while(endcycle){
+  static uint8_t shift = 0;
+  static bool directionUp = true; // Determines whether bands move up or down
+  static uint8_t flutterVariance = 0; // Variance for random speed
+
+  CRGBPalette16 currentPalette = getPaletteForHour(hour); // Get palette based on timeHour
+
+  // Draw color bands across the matrix
+  for (int y = 0; y < HEIGHT; y++) {
+    for (int x = 0; x < WIDTH; x++) {
+      uint8_t colorIndex = (x * 16 / WIDTH) + shift; // Generate bands based on X position
+      leds[XY(x, y)] = ColorFromPalette(currentPalette, colorIndex, 40);
+      leds2[XY(x, y)] = ColorFromPalette(currentPalette, colorIndex, 40);  // 128 for half brightness
+    }
+  }
+
+  FastLED.show();
+
+  // Adjust shift direction and random variance
+  if (directionUp) {
+    shift += (1 + random(3)); // Move up with random speed variance
+  } else {
+    shift -= (1 + random(3)); // Move down with random speed variance
+  }
+
+  // Randomly switch direction for fluttering effect
+  if (random(10) > 7) {
+    directionUp = !directionUp;
+  }
+
+  // Add random delay to create fluttering timing
+  flutterVariance = random(50, 150); // Random delay between 50 and 150 milliseconds
+  delay(flutterVariance);
+  }
+}
+
